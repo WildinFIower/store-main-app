@@ -105,3 +105,7 @@ jobs:
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+      - name: Verify AWS Identity
+  run: |
+    aws sts get-caller-identity

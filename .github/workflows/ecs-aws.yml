@@ -31,14 +31,12 @@ on:
     branches: [ "main" ]
 
 env:
-  AWS_REGION: us-east-1                   # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: millionmax           # set this to your Amazon ECR repository name
-  ECS_SERVICE: millionmax-service                 # set this to your Amazon ECS service name
-  ECS_CLUSTER: millionmax                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: millionmax-task-revision1.json  # set this to the path to your Amazon ECS task definition
-                                               # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: millionmax           # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: millionmax
+  ECS_SERVICE: millionmax-service
+  ECS_CLUSTER: millionmax
+  ECS_TASK_DEFINITION: millionmax-task-revision1.json
+  CONTAINER_NAME: millionmax
 
 permissions:
   contents: read
@@ -61,6 +59,23 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ env.AWS_REGION }}
 
+    # NEW STEP: Create Cluster and Service
+    - name: Create ECS Cluster and Service
+      run: |
+        # Create cluster if not exists
+        aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} || \
+        aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER }}
+
+        # Create service if not exists
+        aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} || \
+        aws ecs create-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service-name ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+          --desired-count 1 \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[subnet-09f33bd57c68bfec2],securityGroups=[sg-0ec9083fca98c135c],assignPublicIp=ENABLED}"
+
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
@@ -71,9 +86,6 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Build a docker container and
-        # push it to ECR so that it can
-        # be deployed to ECS.
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT

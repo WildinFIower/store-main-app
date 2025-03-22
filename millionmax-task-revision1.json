@@ -90,6 +90,6 @@
     },
     "registeredAt": "2025-03-22T14:28:45.071Z",
     "registeredBy": "arn:aws:sts::279053082898:assumed-role/voclabs/user3514434=Chinyere_Vivian_Akwuneche",
-    //"enableFaultInjection": false,
+    
     "tags": []
 }
